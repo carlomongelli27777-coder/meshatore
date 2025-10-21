@@ -12,8 +12,8 @@ public class TriToQuadConverter
 {
     private const double EPSILON = 1e-10;
     private const double MIN_CONVEXITY_ANGLE = 10.0; // degrees
-    private const double MAX_SKEWNESS = 0.7;
-    private const double MAX_ASPECT_RATIO = 4.0;
+    private const double MAX_SKEWNESS = 0.85; // More permissive
+    private const double MAX_ASPECT_RATIO = 5.0; // More permissive
 
     /// <summary>
     /// Triangle adjacency information
@@ -184,41 +184,48 @@ public class TriToQuadConverter
         if (sharedEdge == null)
             return null;
 
-        // Find the four vertices of the quad
-        Point2D[] t1Verts = t1.Vertices;
-        Point2D[] t2Verts = t2.Vertices;
-
-        List<Point2D> quadVerts = new List<Point2D>();
-
-        // Find vertices not on shared edge from t1
-        foreach (var v in t1Verts)
+        // Find the vertex from t1 that's not on the shared edge
+        Point2D? v1 = null;
+        foreach (var v in t1.Vertices)
         {
             if (!v.Equals(sharedEdge.P1, EPSILON) && !v.Equals(sharedEdge.P2, EPSILON))
             {
-                quadVerts.Add(v);
+                v1 = v;
                 break;
             }
         }
 
-        // Add shared edge vertices in order
-        quadVerts.Add(sharedEdge.P1);
-
-        // Find vertices not on shared edge from t2
-        foreach (var v in t2Verts)
+        // Find the vertex from t2 that's not on the shared edge
+        Point2D? v2 = null;
+        foreach (var v in t2.Vertices)
         {
             if (!v.Equals(sharedEdge.P1, EPSILON) && !v.Equals(sharedEdge.P2, EPSILON))
             {
-                quadVerts.Add(v);
+                v2 = v;
                 break;
             }
         }
 
-        quadVerts.Add(sharedEdge.P2);
-
-        if (quadVerts.Count != 4)
+        if (v1 == null || v2 == null)
             return null;
 
-        return new Quad(quadVerts[0], quadVerts[1], quadVerts[2], quadVerts[3]);
+        // Create quad in counter-clockwise order
+        // Check orientation of v1 relative to shared edge
+        double orient1 = Point2D.Orient2D(sharedEdge.P1, sharedEdge.P2, v1);
+
+        Quad quad;
+        if (orient1 > 0) // v1 is on left of shared edge
+        {
+            // Order: v1, P1, v2, P2
+            quad = new Quad(v1, sharedEdge.P1, v2, sharedEdge.P2);
+        }
+        else
+        {
+            // Order: v1, P2, v2, P1
+            quad = new Quad(v1, sharedEdge.P2, v2, sharedEdge.P1);
+        }
+
+        return quad;
     }
 
     /// <summary>

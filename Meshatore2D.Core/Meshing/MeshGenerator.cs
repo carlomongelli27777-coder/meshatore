@@ -35,12 +35,25 @@ public class MeshGenerator
         var result = new MeshResult();
         result.BoundaryPoints = new List<Point2D>(boundaryPoints);
 
+        // Calculate target edge length if not specified
+        double targetEdgeLength = options.TargetEdgeLength;
+        if (targetEdgeLength <= 0)
+        {
+            // Auto-calculate based on bounding box diagonal
+            double minX = boundaryPoints.Min(p => p.X);
+            double maxX = boundaryPoints.Max(p => p.X);
+            double minY = boundaryPoints.Min(p => p.Y);
+            double maxY = boundaryPoints.Max(p => p.Y);
+            double diagLength = Math.Sqrt((maxX - minX) * (maxX - minX) + (maxY - minY) * (maxY - minY));
+            targetEdgeLength = diagLength / 15; // Create ~15x15 grid
+        }
+
         // Step 1: Triangulation
-        Console.WriteLine("Step 1: Delaunay Triangulation...");
+        Console.WriteLine($"Step 1: Delaunay Triangulation (edge length: {targetEdgeLength:F2})...");
         var triangles = _triangulator.Triangulate(
             boundaryPoints,
             null,
-            options.TargetEdgeLength
+            targetEdgeLength
         );
         result.InitialTriangleCount = triangles.Count;
 
@@ -87,7 +100,7 @@ public class MeshOptions
     /// <summary>
     /// Quality threshold for quad formation (0-1, higher = stricter)
     /// </summary>
-    public double QuadQualityThreshold { get; set; } = 0.5;
+    public double QuadQualityThreshold { get; set; } = 0.3;
 
     /// <summary>
     /// Enable smoothing of triangle mesh before conversion

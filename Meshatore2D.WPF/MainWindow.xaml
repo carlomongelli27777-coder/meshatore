@@ -38,7 +38,7 @@
                         <TextBox Name="EdgeLengthTextBox" Text="0"/>
 
                         <Label Content="Quad Quality Threshold (0-1):"/>
-                        <Slider Name="QualitySlider" Minimum="0" Maximum="1" Value="0.5"
+                        <Slider Name="QualitySlider" Minimum="0" Maximum="1" Value="0.3"
                                 TickFrequency="0.1" IsSnapToTickEnabled="True"/>
                         <TextBlock HorizontalAlignment="Center">
                             <Run Text="Value: "/>

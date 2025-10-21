@@ -88,27 +88,70 @@ public class ConstrainedDelaunayTriangulator
         double maxX = boundary.Max(p => p.X);
         double maxY = boundary.Max(p => p.Y);
 
-        // Generate grid points
-        int nx = (int)Math.Ceiling((maxX - minX) / spacing);
-        int ny = (int)Math.Ceiling((maxY - minY) / spacing);
+        // Add small margin to ensure points are well inside
+        double margin = spacing * 0.1;
+        minX += margin;
+        minY += margin;
+        maxX -= margin;
+        maxY -= margin;
 
-        for (int i = 1; i < nx; i++)
+        // Generate grid points
+        double x = minX;
+        while (x <= maxX)
         {
-            for (int j = 1; j < ny; j++)
+            double y = minY;
+            while (y <= maxY)
             {
-                double x = minX + i * spacing;
-                double y = minY + j * spacing;
                 Point2D p = new Point2D(x, y);
 
-                // Check if point is inside polygon
-                if (IsPointInPolygon(p, boundary))
+                // Check if point is inside polygon and not too close to boundary
+                if (IsPointInPolygon(p, boundary) && !IsTooCloseToBoundary(p, boundary, spacing * 0.3))
                 {
                     points.Add(p);
                 }
+
+                y += spacing;
             }
+            x += spacing;
         }
 
         return points;
+    }
+
+    /// <summary>
+    /// Check if point is too close to polygon boundary
+    /// </summary>
+    private bool IsTooCloseToBoundary(Point2D point, List<Point2D> boundary, double minDist)
+    {
+        for (int i = 0; i < boundary.Count; i++)
+        {
+            Point2D p1 = boundary[i];
+            Point2D p2 = boundary[(i + 1) % boundary.Count];
+
+            // Calculate distance from point to edge
+            double dist = DistancePointToSegment(point, p1, p2);
+            if (dist < minDist)
+                return true;
+        }
+        return false;
+    }
+
+    /// <summary>
+    /// Calculate distance from point to line segment
+    /// </summary>
+    private double DistancePointToSegment(Point2D p, Point2D a, Point2D b)
+    {
+        double dx = b.X - a.X;
+        double dy = b.Y - a.Y;
+        double lengthSq = dx * dx + dy * dy;
+
+        if (lengthSq < EPSILON)
+            return p.DistanceTo(a);
+
+        double t = Math.Max(0, Math.Min(1, ((p.X - a.X) * dx + (p.Y - a.Y) * dy) / lengthSq));
+        Point2D projection = new Point2D(a.X + t * dx, a.Y + t * dy);
+
+        return p.DistanceTo(projection);
     }
 
     /// <summary>
@@ -210,12 +253,28 @@ public class ConstrainedDelaunayTriangulator
     }
 
     /// <summary>
-    /// Check if triangle centroid is inside polygon
+    /// Check if triangle is inside polygon
+    /// Triangle is inside if its centroid is inside OR all vertices are on/inside boundary
     /// </summary>
     private bool IsTriangleInPolygon(Triangle triangle, List<Point2D> polygon)
     {
         Point2D centroid = triangle.Centroid;
-        return IsPointInPolygon(centroid, polygon);
+        if (IsPointInPolygon(centroid, polygon))
+            return true;
+
+        // Check if all vertices are boundary vertices or inside
+        int verticesOnOrInside = 0;
+        foreach (var vertex in triangle.Vertices)
+        {
+            bool onBoundary = polygon.Any(bp => bp.Equals(vertex, EPSILON));
+            bool inside = IsPointInPolygon(vertex, polygon);
+
+            if (onBoundary || inside)
+                verticesOnOrInside++;
+        }
+
+        // If all 3 vertices are on/inside, triangle is valid
+        return verticesOnOrInside == 3;
     }
 
     /// <summary>
