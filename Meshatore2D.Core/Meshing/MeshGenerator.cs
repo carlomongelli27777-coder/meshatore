@@ -39,13 +39,16 @@ public class MeshGenerator
         double targetEdgeLength = options.TargetEdgeLength;
         if (targetEdgeLength <= 0)
         {
-            // Auto-calculate based on bounding box diagonal
+            // Auto-calculate based on bounding box size
             double minX = boundaryPoints.Min(p => p.X);
             double maxX = boundaryPoints.Max(p => p.X);
             double minY = boundaryPoints.Min(p => p.Y);
             double maxY = boundaryPoints.Max(p => p.Y);
-            double diagLength = Math.Sqrt((maxX - minX) * (maxX - minX) + (maxY - minY) * (maxY - minY));
-            targetEdgeLength = diagLength / 15; // Create ~15x15 grid
+            double width = maxX - minX;
+            double height = maxY - minY;
+            double avgSize = (width + height) / 2.0;
+            targetEdgeLength = avgSize / 8.0; // Create ~8x8 grid (64 internal points)
+            Console.WriteLine($"Auto-calculated edge length: {targetEdgeLength:F2} (domain: {width:F0}x{height:F0})");
         }
 
         // Step 1: Triangulation

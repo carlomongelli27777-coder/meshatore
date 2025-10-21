@@ -49,8 +49,11 @@ public class ConstrainedDelaunayTriangulator
         {
             // Generate internal points using simple grid-based approach
             var generatedPoints = GenerateInternalPoints(boundaryPoints, targetEdgeLength);
+            Console.WriteLine($"Generated {generatedPoints.Count} internal points (spacing: {targetEdgeLength:F2})");
             allPoints.AddRange(generatedPoints);
         }
+
+        Console.WriteLine($"Total points for triangulation: {allPoints.Count} (boundary: {boundaryPoints.Count}, internal: {allPoints.Count - boundaryPoints.Count})");
 
         if (internalPoints != null && internalPoints.Count > 0)
         {
@@ -88,24 +91,22 @@ public class ConstrainedDelaunayTriangulator
         double maxX = boundary.Max(p => p.X);
         double maxY = boundary.Max(p => p.Y);
 
-        // Add small margin to ensure points are well inside
-        double margin = spacing * 0.1;
-        minX += margin;
-        minY += margin;
-        maxX -= margin;
-        maxY -= margin;
+        // Start from first internal grid point (not on boundary)
+        double startX = minX + spacing * 0.5;
+        double startY = minY + spacing * 0.5;
 
         // Generate grid points
-        double x = minX;
-        while (x <= maxX)
+        double x = startX;
+        while (x < maxX)
         {
-            double y = minY;
-            while (y <= maxY)
+            double y = startY;
+            while (y < maxY)
             {
                 Point2D p = new Point2D(x, y);
 
-                // Check if point is inside polygon and not too close to boundary
-                if (IsPointInPolygon(p, boundary) && !IsTooCloseToBoundary(p, boundary, spacing * 0.3))
+                // Check if point is inside polygon
+                // Don't check distance to boundary - let Delaunay handle edge triangles
+                if (IsPointInPolygon(p, boundary))
                 {
                     points.Add(p);
                 }
@@ -116,42 +117,6 @@ public class ConstrainedDelaunayTriangulator
         }
 
         return points;
-    }
-
-    /// <summary>
-    /// Check if point is too close to polygon boundary
-    /// </summary>
-    private bool IsTooCloseToBoundary(Point2D point, List<Point2D> boundary, double minDist)
-    {
-        for (int i = 0; i < boundary.Count; i++)
-        {
-            Point2D p1 = boundary[i];
-            Point2D p2 = boundary[(i + 1) % boundary.Count];
-
-            // Calculate distance from point to edge
-            double dist = DistancePointToSegment(point, p1, p2);
-            if (dist < minDist)
-                return true;
-        }
-        return false;
-    }
-
-    /// <summary>
-    /// Calculate distance from point to line segment
-    /// </summary>
-    private double DistancePointToSegment(Point2D p, Point2D a, Point2D b)
-    {
-        double dx = b.X - a.X;
-        double dy = b.Y - a.Y;
-        double lengthSq = dx * dx + dy * dy;
-
-        if (lengthSq < EPSILON)
-            return p.DistanceTo(a);
-
-        double t = Math.Max(0, Math.Min(1, ((p.X - a.X) * dx + (p.Y - a.Y) * dy) / lengthSq));
-        Point2D projection = new Point2D(a.X + t * dx, a.Y + t * dy);
-
-        return p.DistanceTo(projection);
     }
 
     /// <summary>
